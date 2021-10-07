@@ -27,6 +27,7 @@ library(viridis)
     ## 载入需要的程辑包：viridisLite
 
 ``` r
+library(patchwork)
 #global option for graph size
 knitr::opts_chunk$set(
   fig.width = 6,
@@ -197,3 +198,171 @@ weather_df %>%
     ## Warning: Removed 15 rows containing missing values (geom_point).
 
 <img src="visualization2_files/figure-gfm/unnamed-chunk-8-1.png" width="99%" />
+
+## `data` in geom
+
+``` r
+central_park = 
+  weather_df %>% 
+  filter(name == "CentralPark_NY")
+
+waikiki = 
+  weather_df %>% 
+  filter(name == "Waikiki_HA")
+
+waikiki %>% 
+ggplot(aes(x = date, y = tmax, color = name)) + 
+  geom_point() + 
+  geom_line(data = central_park)
+```
+
+    ## Warning: Removed 3 rows containing missing values (geom_point).
+
+<img src="visualization2_files/figure-gfm/unnamed-chunk-9-1.png" width="99%" />
+
+## `patchwork`
+
+``` r
+ggp_tmax_tmin =
+  weather_df %>% 
+ ggplot(aes(x = tmax, y = tmin, color = name)) + 
+  geom_point(alpha = .3)+
+theme(legend.position = "none")
+
+ggp_prcp_dens = 
+  weather_df %>% 
+  filter(prcp > 0) %>% 
+  ggplot(aes(x = prcp, fill = name)) + 
+  geom_density(alpha = .5)+
+   theme(legend.position = "none")
+
+ggp_tmax_tmax = 
+   weather_df %>% 
+  ggplot(aes(x = date, y = tmax, color = name)) + 
+  geom_point(alpha = .3) +
+  geom_smooth(se = FALSE) +
+  theme(legend.position = "bottom")
+ 
+ggp_tmax_tmax + ggp_tmax_tmin #patchwork package
+```
+
+    ## `geom_smooth()` using method = 'loess' and formula 'y ~ x'
+
+    ## Warning: Removed 3 rows containing non-finite values (stat_smooth).
+
+    ## Warning: Removed 3 rows containing missing values (geom_point).
+
+    ## Warning: Removed 15 rows containing missing values (geom_point).
+
+<img src="visualization2_files/figure-gfm/unnamed-chunk-10-1.png" width="99%" />
+
+``` r
+(ggp_tmax_tmin + ggp_prcp_dens) / ggp_tmax_tmax
+```
+
+    ## Warning: Removed 15 rows containing missing values (geom_point).
+
+    ## `geom_smooth()` using method = 'loess' and formula 'y ~ x'
+
+    ## Warning: Removed 3 rows containing non-finite values (stat_smooth).
+
+    ## Warning: Removed 3 rows containing missing values (geom_point).
+
+<img src="visualization2_files/figure-gfm/unnamed-chunk-10-2.png" width="99%" />
+
+## data manipulation
+
+factors
+
+``` r
+weather_df %>% 
+  mutate(
+    name = fct_reorder(name, tmax) #make name factor and order it by tmax?
+  ) %>% 
+  ggplot(aes(x = name, y = tmax)) +
+  geom_boxplot()
+```
+
+    ## Warning: Removed 3 rows containing non-finite values (stat_boxplot).
+
+<img src="visualization2_files/figure-gfm/unnamed-chunk-11-1.png" width="99%" />
+
+``` r
+weather_df %>%
+  select(name, tmax, tmin) %>% #如果要把tax和tmin放到temp的内容里，要建立一个新的vector 放进max和min
+  pivot_longer(
+    tmax:tmin,
+    names_to = "observation", 
+    values_to = "temp") %>% 
+  ggplot(aes(x = temp, fill = observation)) +
+  geom_density(alpha = .5) + 
+  facet_grid(~name) + 
+  viridis::scale_fill_viridis(discrete = TRUE)
+```
+
+    ## Warning: Removed 18 rows containing non-finite values (stat_density).
+
+<img src="visualization2_files/figure-gfm/unnamed-chunk-12-1.png" width="99%" />
+
+``` r
+pulse_data = 
+  haven::read_sas("./data_import_examples//public_pulse_data.sas7bdat") %>%
+  janitor::clean_names() %>%
+  pivot_longer(
+    bdi_score_bl:bdi_score_12m,
+    names_to = "visit", 
+    names_prefix = "bdi_score_",
+    values_to = "bdi") %>%
+  select(id, visit, everything()) %>%
+  mutate(
+    visit = recode(visit, "bl" = "00m"),
+    visit = factor(visit, levels = str_c(c("00", "01", "06", "12"), "m"))) %>%
+  arrange(id, visit)
+```
+
+    ## Warning in FUN(X[[i]], ...): strings not representable in native encoding will
+    ## be translated to UTF-8
+
+    ## Warning in FUN(X[[i]], ...): unable to translate '<U+00C4>' to native encoding
+
+    ## Warning in FUN(X[[i]], ...): unable to translate '<U+00D6>' to native encoding
+
+    ## Warning in FUN(X[[i]], ...): unable to translate '<U+00E4>' to native encoding
+
+    ## Warning in FUN(X[[i]], ...): unable to translate '<U+00F6>' to native encoding
+
+    ## Warning in FUN(X[[i]], ...): unable to translate '<U+00DF>' to native encoding
+
+    ## Warning in FUN(X[[i]], ...): unable to translate '<U+00C6>' to native encoding
+
+    ## Warning in FUN(X[[i]], ...): unable to translate '<U+00E6>' to native encoding
+
+    ## Warning in FUN(X[[i]], ...): unable to translate '<U+00D8>' to native encoding
+
+    ## Warning in FUN(X[[i]], ...): unable to translate '<U+00F8>' to native encoding
+
+    ## Warning in FUN(X[[i]], ...): unable to translate '<U+00C5>' to native encoding
+
+    ## Warning in FUN(X[[i]], ...): unable to translate '<U+00E5>' to native encoding
+
+``` r
+ggplot(pulse_data, aes(x = visit, y = bdi)) + 
+  geom_boxplot()
+```
+
+    ## Warning: Removed 879 rows containing non-finite values (stat_boxplot).
+
+<img src="visualization2_files/figure-gfm/unnamed-chunk-13-1.png" width="99%" />
+
+``` r
+pulse_data %>% 
+  ggplot(aes(x = visit,y = bdi))+
+  geom_point(size = .2)+
+  geom_line(aes(group = id),alpha = .3)
+```
+
+    ## Warning: Removed 879 rows containing missing values (geom_point).
+
+    ## Warning: Removed 515 row(s) containing missing values (geom_path).
+
+<img src="visualization2_files/figure-gfm/unnamed-chunk-13-2.png" width="99%" />

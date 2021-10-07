@@ -10,6 +10,7 @@ library(tidyverse)
 library(ggridges)
 library(hexbin)
 library(viridis)
+library(patchwork)
 #global option for graph size
 knitr::opts_chunk$set(
   fig.width = 6,
@@ -132,5 +133,103 @@ weather_df %>%
   theme_bw() +  #black and white can only be used before theme 
   theme_minimal()+
   theme(legend.position = "bottom") 
+```
+
+## `data` in geom
+
+```{r}
+central_park = 
+  weather_df %>% 
+  filter(name == "CentralPark_NY")
+
+waikiki = 
+  weather_df %>% 
+  filter(name == "Waikiki_HA")
+
+waikiki %>% 
+ggplot(aes(x = date, y = tmax, color = name)) + 
+  geom_point() + 
+  geom_line(data = central_park)
+```
+
+## `patchwork`
+
+```{r}
+ggp_tmax_tmin =
+  weather_df %>% 
+ ggplot(aes(x = tmax, y = tmin, color = name)) + 
+  geom_point(alpha = .3)+
+theme(legend.position = "none")
+
+ggp_prcp_dens = 
+  weather_df %>% 
+  filter(prcp > 0) %>% 
+  ggplot(aes(x = prcp, fill = name)) + 
+  geom_density(alpha = .5)+
+   theme(legend.position = "none")
+
+ggp_tmax_tmax = 
+   weather_df %>% 
+  ggplot(aes(x = date, y = tmax, color = name)) + 
+  geom_point(alpha = .3) +
+  geom_smooth(se = FALSE) +
+  theme(legend.position = "bottom")
+ 
+ggp_tmax_tmax + ggp_tmax_tmin #patchwork package
+
+(ggp_tmax_tmin + ggp_prcp_dens) / ggp_tmax_tmax
+```
+
+## data manipulation
+
+factors
+
+```{r}
+weather_df %>% 
+  mutate(
+    name = fct_reorder(name, tmax) #make name factor and order it by tmax?
+  ) %>% 
+  ggplot(aes(x = name, y = tmax)) +
+  geom_boxplot()
+
+```
+
+
+```{r}
+weather_df %>%
+  select(name, tmax, tmin) %>% #如果要把tax和tmin放到temp的内容里，要建立一个新的vector 放进max和min
+  pivot_longer(
+    tmax:tmin,
+    names_to = "observation", 
+    values_to = "temp") %>% 
+  ggplot(aes(x = temp, fill = observation)) +
+  geom_density(alpha = .5) + 
+  facet_grid(~name) + 
+  viridis::scale_fill_viridis(discrete = TRUE)
+```
+
+```{r}
+
+pulse_data = 
+  haven::read_sas("./data_import_examples//public_pulse_data.sas7bdat") %>%
+  janitor::clean_names() %>%
+  pivot_longer(
+    bdi_score_bl:bdi_score_12m,
+    names_to = "visit", 
+    names_prefix = "bdi_score_",
+    values_to = "bdi") %>%
+  select(id, visit, everything()) %>%
+  mutate(
+    visit = recode(visit, "bl" = "00m"),
+    visit = factor(visit, levels = str_c(c("00", "01", "06", "12"), "m"))) %>%
+  arrange(id, visit)
+
+ggplot(pulse_data, aes(x = visit, y = bdi)) + 
+  geom_boxplot()
+
+pulse_data %>% 
+  ggplot(aes(x = visit,y = bdi))+
+  geom_point(size = .2)+
+  geom_line(aes(group = id),alpha = .3)
 ```
 
