@@ -9,6 +9,12 @@ output: github_document
 library(tidyverse)
 library(ggridges)
 library(hexbin)
+#global option for graph size
+knitr::opts_chunk$set(
+  fig.width = 6,
+  fig.asp = .6,
+  out.width = "99%"
+)
 ```
 
 load the data I use very often
@@ -144,5 +150,15 @@ weather_df %>%
   ggplot(aes(x = tmax, y = name)) +
   goem_density_ridges()
 ```
+
+## embedding plots
+
+```{r, fig.height = 12 }
+#可以压缩图片
+weather_df %>% 
+  ggplot(aes(x = tmin, y = tmax, color = name, color = name)) +
+  geom_point(alpha = .3)
+```
+
 
 

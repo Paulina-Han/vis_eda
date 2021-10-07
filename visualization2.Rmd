@@ -1,0 +1,12 @@
+---
+title: "visualization2"
+author: "Paulina Han"
+date: "2021/10/7"
+output: html_document
+---
+
+```{r}
+library(tidyverse)
+library(patchwork)
+```
+
